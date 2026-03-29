@@ -42,18 +42,22 @@ class GeminiClient:
         self.config = config
         
         try:
+            # 1. API 키 설정
             genai.configure(api_key=config.api_key)
-            # 모델명 앞에 'models/'가 없다면 붙여서 경로를 명확히 합니다.
-            model_path = config.model_name
-            if not model_path.startswith('models/'):
-                model_path = f"models/{model_path}"
             
-            self._model = genai.GenerativeModel(model_path) # 수정된 경로 사용
-            logger.info(f"Initialized Gemini client with model: {model_path}")
+            # 2. 모델 경로 정규화 (중복 방지 및 models/ 접두사 강제)
+            pure_name = config.model_name.replace('models/', '')
+            final_model_path = f"models/{pure_name}"
+            
+            # 3. 모델 초기화 (한 번만 수행!)
+            self._model = genai.GenerativeModel(model_name=final_model_path)
+            logger.info(f"Initialized Gemini client with model: {final_model_path}")
+            
         except Exception as e:
             logger.error(f"Failed to initialize Gemini client: {str(e)}")
             raise GeminiClientError(f"Failed to initialize Gemini client: {str(e)}")
         
+        # 4. 생성 옵션 설정
         self._generation_config = {
             "max_output_tokens": config.max_output_tokens,
             "temperature": config.temperature,
@@ -144,13 +148,13 @@ class GeminiClient:
             if "quota" in error_msg or "rate limit" in error_msg:
                 logger.warning("Gemini API rate limit or quota exceeded")
                 raise GeminiClientError("API rate limit exceeded")
-            elif "not found" in error_msg or "model" in error_msg:
-                raise ModelNotAvailableError(f"Model {self.config.model_name} not available")
+            #elif "not found" in error_msg or "model" in error_msg:
+            #    raise ModelNotAvailableError(f"Model {self.config.model_name} not available")
             elif "token" in error_msg and "limit" in error_msg:
                 raise TokenLimitExceededError("Token limit exceeded")
             else:
                 logger.error(f"Gemini API error: {str(e)}")
-                raise GeminiClientError(f"Gemini API error: {str(e)}")
+                raise GeminiClientError(f"Gemini API error details: {str(e)}")
     
     def _create_analysis_prompt(
         self,
