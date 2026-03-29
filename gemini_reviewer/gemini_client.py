@@ -42,14 +42,20 @@ class GeminiClient:
         self.config = config
         
         try:
-            # 1. API 키 설정
-            genai.configure(api_key=config.api_key)
+            # --- 이 부분을 추가/수정하세요 ---
+            import google.generativeai.types.constant_types as constants
+            # API 버전을 v1beta에서 v1으로 강제 전환
+            # 만약 라이브러리 구조가 다르다면 아래처럼 직접 환경변수를 건드릴 수도 있습니다.
+            import os
+            os.environ["GOOGLE_GENERATIVE_AI_API_VERSION"] = "v1" 
             
-            # 2. 모델 경로 정규화 (중복 방지 및 models/ 접두사 강제)
+            genai.configure(api_key=config.api_key)
+            # -------------------------------
+
             pure_name = config.model_name.replace('models/', '')
             final_model_path = f"models/{pure_name}"
             
-            # 3. 모델 초기화 (한 번만 수행!)
+            # 모델 초기화 시점에 다시 한번 확인
             self._model = genai.GenerativeModel(model_name=final_model_path)
             logger.info(f"Initialized Gemini client with model: {final_model_path}")
             
